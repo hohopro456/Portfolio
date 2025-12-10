@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sơn "Marbles" Nguyễn - Graphic Designer</title>
+	<link rel="icon" type="image/png" href="./20230625_183511.png" />
+  <meta name="description" content="Web portfolio đơn giản: before/after slider, zoom & pan, lazy-loading, transitions" />
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#38bdf8; --white:#e6eef8;
+    }
+    *{
+			box-sizing:border-box;
+			scroll-behavior: smooth;
+		}
+    html,body{min-height: 100vh}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;color:var(--white);background:linear-gradient(180deg,#071029 0%, #071426 100%);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+    .wrap{max-width:1100px;margin:32px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted)}
+
+    /* grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+    .card{background:#ffffff, rgba(255,255,255,0.01));border-radius:12px;padding:12px;cursor:pointer;box-shadow:0 6px 18px rgba(2,6,23,0.6);transition:transform .22s ease,box-shadow .22s ease}
+    .card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(2,6,23,0.8)}
+    .thumb{width:100%;height:160px;border-radius:10px;overflow:hidden;background:#071126;display:flex;align-items:center;justify-content:center}
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s ease}
+    .card:hover .thumb img{transform:scale(1.06)}
+    .meta{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+    .meta .title{font-weight:600}
+    .meta .tags{color:var(--muted);font-size:13px}
+
+    /* modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.7);z-index:60}
+    .modal.open{display:flex}
+    .viewer{width:95%;max-width:1100px;background:linear-gradient(180deg,#071428,#071626);border-radius:12px;box-shadow:0 30px 60px rgba(3,7,18,0.8);overflow:hidden}
+    .viewer .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03)}
+    .viewer .topbar .left{display:flex;gap:8px;align-items:center}
+    .viewer .topbar button{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--white);padding:6px 8px;border-radius:8px;cursor:pointer}
+    .viewer .content{display:flex;gap:14px;padding:14px}
+
+    /* image stage */
+    .stage{flex:1;min-height:420px;max-height:70vh;background:#071226;border-radius:10px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center}
+    .stage .after, .stage .before{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events: none}
+    .stage img{max-width:100%;max-height:100%;user-select:none;pointer-events:none;transition:none}
+
+    /* clip before by width */
+		.before{
+			position:absolute;
+			inset:0;
+			overflow:hidden;
+			transition:clip-path none;
+			clip-path: inset(0 50% 0 0); /* RIGHT = 50% */
+		}
+    .handle{position:absolute;top:0;bottom:0;width:28px;margin-left:-14px;left:50%;display:flex;align-items:center;justify-content:center;z-index:20}
+    .handle .knob{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#fff,#dfe9f4);display:flex;align-items:center;justify-content:center;border:2px solid rgba(0,0,0,0.12);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .handle .knob:after{content:'\2630';font-size:14px;color:#111}
+
+    /* right panel */
+    .side{width:260px;display:flex;flex-direction:column;gap:10px}
+    .side h3{margin:0}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    .controls button{padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.02);color:var(--white);cursor:pointer}
+
+    /* bottom range */
+    .rangewrap{position:absolute;left:14px;right:14px;bottom:14px;display:flex;align-items:center;gap:10px}
+    .rangewrap input[type=range]{flex:1}
+
+    /* transitions */
+    .fade-in{animation:fadeIn .16s ease both}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+    /* small screens */
+    @media (max-width:880px){
+      .viewer .content{flex-direction:column}
+      .side{width:100%}
+    }
+
+    /* small helper */
+    .kbd{background:rgba(255,255,255,0.04);padding:4px 6px;border-radius:6px;font-size:13px}
+
+		header .logo
+		{
+			color: #fff;
+			font-weight: 700;
+			font-size: 2em;
+			text-decoration: none;
+			padding:50px;
+		}
+		header .logo span
+		{
+			color:#ff0157;
+		}
+	ul{
+		list-style-type: none;
+		text-decoration: none;
+	}
+	ul li{
+		padding:20px;
+	}
+	ul li a{
+		text-decoration: none;
+		font-size:18px;
+		font-weight:500;
+		color:#ff0157;
+		transition: .3s;
+	}
+	
+	a:hover,
+	a.active	{
+			color: #0ef;
+	}
+	
+	section.lmao {
+			background: #1f242d;
+			min-height: 100vh;
+			padding: 100px;
+
+			display: flex;
+			flex-direction: column;     /* xếp h2 lên trước, p xuống dưới */
+			align-items: center;        /* chỉ căn giữa theo ngang */
+			color: #fff;
+	}
+	
+	header.nav{
+			position: fixed;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			width: 100%;
+			padding: 20px;
+			height: 80px;
+	}
+	#showcase {
+		min-height: 100vh;
+		background: #1f242d;     /* giống About/Contact */
+		padding-top: 120px;       /* tránh đè vào header fixed */
+		padding-bottom: 60px;
+		color: #fff;
+	}
+	#showcase, #about, #contact {
+		padding-top: 50px;
+	}
+	header.nav ul.navigation {
+			display: flex;
+			gap: 20px;
+	}
+	
+	.para {
+			font-size: 18px;
+			max-width: 800px;
+			text-align: left;
+			margin-top: 10px;
+			
+	}
+	.para span {
+			font-size:40px;
+			font-weight: 300;
+	}
+	.quote-box {
+		border-left: 3px solid #fff;   /* Thanh dọc */
+		padding-left: 16px;            /* Tạo khoảng cách giữa thanh và chữ */
+		margin: 20px 0;
+		color: #fff;
+		font-style: italic;             /* Chữ nghiêng như ảnh */
+		font-size: 18px;                /* Cỡ chữ tuỳ chỉnh */
+		line-height: 1.6;
+		opacity: 0.9;                   /* Nhẹ nhàng hơn */
+	}
+	
+	.timeline-section {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 60px;
+		margin-top: 40px;
+		color: #fff;
+		padding-left: 150px;
+		justify-content: center;
+	}
+
+	.timeline-column .title {
+		font-size: 28px;
+		font-weight: 700;
+		margin-bottom: 30px;
+		display: flex;
+		align-items: center;
+		padding-left: 70px;
+		gap: 8px;
+	}
+
+	.timeline-item {
+		position: relative;
+		padding-left: 25px;
+		margin-bottom: 45px;
+		border-left: 1px solid #444;
+	}
+
+	.timeline-item .dot {
+		width: 14px;
+		height: 14px;
+		background: #0f1724;
+		border: 2px solid #fff;
+		border-radius: 50%;
+		position: absolute;
+		left: -8px;
+		top: 0;
+	}
+
+	.timeline-item .year {
+		font-size: 13px;
+		letter-spacing: 2px;
+		opacity: 0.7;
+		display: block;
+		margin-bottom: 6px;
+	}
+
+	.timeline-item h3 {
+		font-size: 20px;
+		font-weight: 700;
+		margin: 0;
+	}
+
+	.timeline-item h4 {
+		font-size: 17px;
+		font-weight: 600;
+		margin: 3px 0 10px;
+		opacity: 0.9;
+	}
+
+	.timeline-item p {
+		font-size: 15px;
+		opacity: 0.8;
+		margin: 0;
+	}
+
+	/* Mobile responsive */
+	@media (max-width: 800px) {
+		.timeline-section {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	span.icon-box {
+		background: rgba(255,255,255,0.1);
+		padding: 6px;
+		border-radius: 10px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.profile-card {
+			text-align: center;
+			padding: 40px 20px;
+			/* Hiệu ứng mờ nhẹ cho thẻ, không quá rõ ràng trong ảnh nhưng có thể thêm */
+			/* background-color: #ffffff10; */ 
+			border-radius: 15px;
+			max-width: 4000px;
+			width: 90%;
+	}
+
+	/* Ảnh đại diện */
+	.avatar-container {
+			/* Đảm bảo khung tròn bên ngoài */
+			display: inline-block;
+			border-radius: 50%;
+			/* Thêm viền nhẹ hoặc hiệu ứng vòng tròn */
+			/* border: 2px solid #555; */ 
+			overflow: hidden; /* Quan trọng để cắt ảnh thành hình tròn */
+			width: 150px; /* Kích thước vòng tròn */
+			height: 150px;
+			margin-bottom: 20px;
+	}
+
+	.avatar {
+			width: 100%;
+			height: 100%;
+			object-fit: cover; /* Đảm bảo ảnh lấp đầy khung mà không bị méo */
+			border-radius: 50%; /* Cắt ảnh thành hình tròn */
+	}
+
+	/* Tên và chức danh */
+	.name {
+			font-size: 2.5em;
+			font-weight: bold;
+			justify-content: center;
+	}
+
+	.title {
+			font-size: 1.1em;
+			color: #aaaaaa; /* Màu xám nhạt hơn */
+			margin-top: 5px;
+			margin-bottom: 30px;
+	}
+
+	/* Liên kết mạng xã hội */
+	.social-links {
+			margin-top: 20px;
+			display: flex;
+			justify-content: center;
+			padding-right:24px;
+			gap: 20px; /* Khoảng cách giữa các icon */
+	}
+
+	.social-links {
+			color: #ffffff; /* Màu icon trắng */
+			font-size: 1.5em;
+			transition: color 0.3s;
+	}
+
+	.social-links:hover {
+			color: #007bff; /* Ví dụ: thay đổi màu khi di chuột */
+	}
+
+	.skills-section {
+		padding: 20px 20px;
+		text-align: center;
+	}
+
+	.skills-section h2 {
+		font-size: 2.5em;
+		margin-bottom: 30px;
+	}
+
+	.skills-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+		gap: 5px;
+		justify-items: center;
+		align-items: center;
+	}
+
+	.skill-card {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		/* optional styling */
+		transition: transform 0.3s ease, background-color 0.3s ease;
+		padding: 6px;
+		border-radius: 8px;
+		fill: white;
+	}
+
+
+	.skill-card:hover {
+		transform: translateY(-5px);
+		/* hoặc đổi border / shadow để nổi bật */
+		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+	}
+
+
+  </style>
+</head>
+<body>
+	<header class="nav">
+		<a href="#" class="logo">Nguyễn Hồ Thiên <span>Sơn</span></a>
+		<ul class="navigation">
+			<li><a href="#about" class="active">About Me</a></li>
+			<li><a href="#showcase">Showcase</a></li>
+		</ul>
+	</header>
+	<section id="about" class="lmao">
+		<div class="profile-card">
+						<div class="avatar-container">
+								<img src="./20230625_183511.png" alt="Ảnh đại diện" class="avatar">
+						</div>
+
+						<h1 class="name">Sơn "Marbles" Nguyễn</h1>
+						<p class="title">Graphic Designer</p>
+
+						<div class="social-links">
+								<a href="#" aria-label="Github"></a>
+								<a href="https://www.facebook.com/NguyenHoThienSon" target="_blank" aria-label="Facebook"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" xml:space="preserve" width="512" height="512">
+<g>
+	<path fill="white" d="M24,12.073c0,5.989-4.394,10.954-10.13,11.855v-8.363h2.789l0.531-3.46H13.87V9.86c0-0.947,0.464-1.869,1.95-1.869h1.509   V5.045c0,0-1.37-0.234-2.679-0.234c-2.734,0-4.52,1.657-4.52,4.656v2.637H7.091v3.46h3.039v8.363C4.395,23.025,0,18.061,0,12.073   c0-6.627,5.373-12,12-12S24,5.445,24,12.073z"/>
+</g>
+</svg></a>
+								<a href="https://www.tiktok.com/@m4rb1e5"  target="_blank"  aria-label="Tiktok"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"  width="24" height="24" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve" width="512" height="512">
+<path fill="white" d="M22.465,9.866c-2.139,0-4.122-0.684-5.74-1.846v8.385c0,4.188-3.407,7.594-7.594,7.594c-1.618,0-3.119-0.51-4.352-1.376  c-1.958-1.375-3.242-3.649-3.242-6.218c0-4.188,3.407-7.595,7.595-7.595c0.348,0,0.688,0.029,1.023,0.074v0.977v3.235  c-0.324-0.101-0.666-0.16-1.023-0.16c-1.912,0-3.468,1.556-3.468,3.469c0,1.332,0.756,2.489,1.86,3.07  c0.481,0.253,1.028,0.398,1.609,0.398c1.868,0,3.392-1.486,3.462-3.338L12.598,0h4.126c0,0.358,0.035,0.707,0.097,1.047  c0.291,1.572,1.224,2.921,2.517,3.764c0.9,0.587,1.974,0.93,3.126,0.93V9.866z"/>
+</svg></a>
+								<a href="mailto:hohopro456@gmail.com" aria-label="Email"><svg <?xml version="1.0" encoding="iso-8859-1"?  width="30" height="30" ><!-- Generator: Adobe Illustrator 19.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"	 viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve"><g>	<g>		<path fill="white" d="M464,64h-16H64H48C21.504,64,0,85.504,0,112v16v256v16c0,26.496,21.504,48,48,48h16h384h16c26.496,0,48-21.504,48-48v-16			V128v-16C512,85.504,490.496,64,464,64z M407.488,96L256,215.616L104.512,96H407.488z M448,416H64V148.672l192,147.68L448,148.64			V416z"/>	</g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g></svg></a>
+						</div>
+		</div>
+		<p class="para">
+				Xin chào các bạn, mình tên là Sơn, sinh năm 2001 và lớn lên tại Pleiku - Gia Lai.
+				Là sinh viên đã tốt nghiệp chuyên ngành Thiết kế Đồ hoạ Đa phương tiện tại Cao đẳng FPT Polytechnic Đà Nẵng.
+				Hiện tại mình đang là Freelancer Thiết kế Đồ hoạ và là Subtitle Editor.<br></p>
+				<div class="quote-box">
+					<p>“Tương lai thuộc về những người tin vào vẻ đẹp trong chính những giấc mơ, hoài bão to lớn của mình...”</p>
+				</div><br>
+		<p class="para">
+				Mình có sở thích là hay tìm tòi những thứ mới lạ, khám phá thế giới xung quanh và ghi lại những khoảnh khắc
+				trên mọi hành trình mà mình đi thông qua chiếc camera bỏ túi bây giờ gọi là Smartphone ^^. Và mình cũng thích xem phim nữa, nhất là những thước phim cũ trước thời mình, thông qua những
+				bộ phim đó mình học được rất nhiều thứ từ tính cách, lối sống, thông tin và kiến thức nhất là trau dồi tiếng Anh cho mình.
+				<br><br>
+				Tuy vì thế mà góc nhìn về mọi thứ xung quanh đối với mình rất đa chiều. Mỗi góc nhìn, mình đều đặt ra các câu hỏi mang nhiều suy tư. Cách giải quyết trước tiên là mình tự trả lời nó, tìm bằng
+				mọi cách để có được đáp án, nếu cảm thấy chưa hài lòng thì mình sẽ hỏi mọi người xung quanh nên đôi khi gây khó chịu với mọi người.
+				Nhưng một khi câu hỏi đó có đáp án, cảm giác nó mạng lại "sướng" lắm, nó như một liều dopamine giúp kích thích bản thân phải học hơn nhiều nữa, phát triển bản thân nhiều hơn, làm nhiều hơn để có
+				thành quả như mình mong đợi.
+				<br>
+				<br>
+				<span>Và bạn biết gì không?</span><br>Nếu như bạn vào được trang này có lẽ bạn hoặc là anh, là chị đang cần một người thiết kế đấy nên là ngó xem sản phẩm
+				bên dưới và cho mình một cơ hội nhé! 🥰
+				<section class="timeline-section">
+					<div class="timeline-column">
+						<h2 class="title"><span class="icon-box"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 3L1 9L12 15L23 9L12 3Z" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5 12V16C5 16 7 19 12 19C17 19 19 16 19 16V12" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</span> Education</h2>
+
+						<div class="timeline-item">
+							<div class="dot"></div>
+							<span class="year">2016 - 2019</span>
+							<h3>Nguyễn Chí Thanh High School</h3>
+							<h4>High School</h4>
+							<p>Studying at THPT Nguyễn Chí Thanh - Gia Lai High School.</p>
+						</div>
+
+						<div class="timeline-item">
+							<div class="dot"></div>
+							<span class="year">2019 - 2022</span>
+							<h3>FPT Polytechnic College</h3>
+							<h4>Multimedia Communications</h4>
+							<p>Studying Multimedia Communications at FPT Polytechnic College.</p>
+						</div>
+					</div>
+
+					<!-- Cột thứ 2 -->
+					<div class="timeline-column">
+						<h2 class="title"><span class="icon-box"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="7" width="18" height="14" rx="2" stroke="white" stroke-width="1.8"/>
+  <path d="M9 7V5C9 4.44772 9.44772 4 10 4H14C14.5523 4 15 4.44772 15 5V7" stroke="white" stroke-width="1.8"/>
+  <path d="M3 12H21" stroke="white" stroke-width="1.8"/>
+</svg>
+</span> Experience</h2>
+
+						<div class="timeline-item">
+							<div class="dot"></div>
+							<span class="year">2022 - 2023</span>
+							<h3>The Newmoon</h3>
+							<h4>Graphic Designer</h4>
+							<p>Designing Coloring book.</p>
+						</div>
+
+						<div class="timeline-item">
+							<div class="dot"></div>
+							<span class="year">2023 - 2024</span>
+							<h3>ODA Studio</h3>
+							<h4>Graphic Designer</h4>
+							<p>Retouching and Enhancing images<br>for interior and real estate projects</p>
+						</div>
+
+						<div class="timeline-item">
+							<div class="dot"></div>
+							<span class="year">2024 - Present</span>
+							<h3>Freelance</h3>
+							<h4>Graphic Designer</h4>
+							<p>Designing and marketing graphic design materials</p>
+						</div>
+
+						<div class="timeline-item">
+							<div class="dot"></div>
+							<span class="year">2024 - Present</span>
+							<h3>Freelance</h3>
+							<h4>Subtitle Editor</h4>
+							<p>OCR, Translate, Adjust & Resync for Movie, TV Series</p>
+						</div>
+					</div>
+				</section>
+				<section id="skills" class="skills-section">
+					<h2>Tech Stack & Skills</h2>
+					<div class="skills-grid">
+						<!-- 1 skill box -->
+						<div class="skill-card">
+							<span><?xml version="1.0" encoding="UTF-8"?><!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="512" height="512"><g id="Layer_2_00000039817479287426663580000002022239267393654928_">	<g id="Surfaces_00000013180303803292169050000003155769525423463324_">		<g id="Photo_Surface_2_">			<g id="Outline_no_shadow_00000073715384240732440140000014327426812104272037_">				<path d="M224.901,191.897c3.481,5.464,5.298,12.009,5.069,18.873c0,9.39-2.13,16.64-6.61,21.98      c-9.888,11.786-27.408,15.14-42.03,15.14h-11.3c-2.56,0-5.34-0.21-8.32-0.42v-71.68c1.49-0.22,4.48-0.43,8.74-0.22      c4.06-0.21,8.96-0.21,14.51-0.21C199.661,175.36,216.444,178.626,224.901,191.897z"/>				<path d="M421.33,6.4H90.67C40.53,6.4,0,46.93,0,97.07v317.86c0,50.14,40.53,90.67,90.67,90.67h330.66      c50.14,0,90.67-40.53,90.67-90.67V97.07C512,46.93,471.47,6.4,421.33,6.4z M263.68,254.93c-8.53,11.95-20.48,20.91-34.35,26.03      c-14.5,5.33-30.5,7.25-48,7.25c-5.12,0-8.53,0-10.66-0.21c-2.14-0.21-5.12-0.21-9.18-0.21v68.48c0.22,1.49-0.85,2.77-2.34,2.98      h-41.39c-1.71,0-2.56-0.85-2.56-2.77V136.96c0-1.49,0.64-2.35,2.13-2.35c3.63,0,7.04,0,11.95-0.21      c5.12-0.21,10.45-0.21,16.21-0.43c5.76-0.21,11.95-0.21,18.56-0.42c6.62-0.22,13.02-0.22,19.42-0.22c17.49,0,32,2.14,43.94,6.62      c10.67,3.62,20.48,9.6,28.59,17.49c6.83,6.83,12.16,15.15,15.57,24.32c3.2,8.96,4.91,18.13,4.91,27.73      C276.48,227.84,272.21,242.99,263.68,254.93z M414.93,337.92c-5.97,8.53-14.29,15.15-23.89,18.99      c-10.45,4.48-23.25,6.82-38.61,6.82c-9.82,0-19.42-0.85-29.02-2.77c-7.46-1.28-14.93-3.63-21.76-6.83      c-1.49-0.85-2.56-2.34-2.34-4.05v-37.12c0-0.64,0.21-1.49,0.85-1.92c0.64-0.43,1.28-0.21,1.92,0.21      c8.32,4.91,17.07,8.32,26.45,10.46c8.11,2.13,16.64,3.2,25.18,3.2c8.1,0,13.86-1.07,17.7-2.99c3.42-1.49,5.76-5.12,5.76-8.96      c0-2.99-1.7-5.76-5.12-8.53c-3.41-2.78-10.45-5.98-20.9-10.03c-10.88-3.84-20.91-8.96-30.3-15.36      c-6.61-4.69-12.16-10.88-16.21-18.13c-3.41-6.83-5.12-14.3-4.91-21.76c0-9.18,2.56-17.92,7.26-25.82      c5.33-8.53,13.22-15.36,22.4-19.62c10.02-5.12,22.61-7.47,37.76-7.47c8.74,0,17.7,0.64,26.45,1.92      c6.4,0.85,12.59,2.56,18.35,4.91c0.85,0.21,1.7,1.06,2.13,1.92c0.21,0.85,0.43,1.7,0.43,2.56v34.77c0,0.85-0.43,1.71-1.07,2.13      c-1.92,0.43-2.99,0.43-3.84,0c-6.4-3.41-13.23-5.76-20.48-7.25c-7.89-1.71-15.79-2.77-23.89-2.77      c-4.27-0.22-8.75,0.42-12.8,1.49c-2.78,0.64-5.12,2.13-6.62,4.27c-1.06,1.7-1.7,3.84-1.7,5.76c0,1.92,0.85,3.84,2.13,5.54      c1.92,2.35,4.48,4.27,7.25,5.76c4.91,2.56,10.03,4.91,15.15,7.04c11.52,3.84,22.61,9.18,32.85,15.58      c7.04,4.48,12.8,10.45,16.86,17.7c3.41,6.83,5.12,14.3,4.9,21.98C423.47,319.57,420.48,329.6,414.93,337.92z"/>			</g>		</g>	</g></g></svg></span>
+						</div>
+						<div class="skill-card">
+							<span><?xml version="1.0" encoding="UTF-8"?><!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="512" height="512"><g id="Layer_2_00000012444315760253497670000016708113870020974252_">	<g id="Surfaces_00000083785640516064199570000010109223220607276941_">		<g id="Photo_Surface_3_">			<g id="Outline_no_shadow_00000088104439256256445230000015830809593780030595_">				<path d="M421.33,6.4H90.67C40.53,6.4,0,46.93,0,97.07v317.86c0,50.14,40.53,90.67,90.67,90.67h330.66      c50.14,0,90.67-40.53,90.67-90.67V97.07C512,46.93,471.47,6.4,421.33,6.4z M278.4,318.93l-6.19,37.12      c0,1.07-0.64,1.92-1.28,2.56c-0.64,0.43-1.28,0.64-2.13,0.64H133.55c-2.35,0-3.42-1.28-3.42-3.84V137.39      c-0.21-1.5,0.86-2.78,2.35-2.99h42.67c1.06-0.21,2.34,0.64,2.34,1.71v179.84h98.56C278.19,315.95,278.83,317.01,278.4,318.93z       M405.55,229.97c0,1.71-1.07,2.35-3.42,2.35c-13.86-0.85-27.73,1.71-40.32,7.25c-4.26,1.92-8.32,4.48-11.52,7.9v108.8      c0,2.13-0.85,2.98-2.77,2.98h-41.6c-1.71,0.22-3.2-0.85-3.41-2.56V237.65c0-5.12,0-10.45-0.22-16      c-0.21-5.54-0.21-11.09-0.42-16.64c-0.22-4.69-0.64-9.38-1.28-14.08c-0.22-1.06,0.42-2.13,1.49-2.34c0.21-0.22,0.43-0.22,0.85,0      h37.34c2.13,0,3.84,1.49,4.48,3.41c0.85,1.49,1.49,3.2,1.7,4.91c0.43,2.13,0.86,4.48,1.07,6.61c0.21,2.35,0.43,4.91,0.43,7.68      c6.4-7.47,14.08-13.65,22.82-18.35c9.82-5.33,20.7-7.89,31.79-7.68c1.49-0.21,2.77,0.86,2.99,2.35V229.97z"/>			</g>		</g>	</g></g></svg></span>
+						</div>
+						<div class="skill-card">
+							<span><?xml version="1.0" encoding="UTF-8"?><!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512.02 512.02" style="enable-background:new 0 0 512.02 512.02;" xml:space="preserve" width="512" height="512"><g id="Layer_2_00000080914336643268906040000013680685670080058297_">	<g id="Surfaces_00000068635135053254290230000014452915921741667200_">		<g id="Video_Audio_Surface">			<g id="Outline_no_shadow_00000182512826952423199550000010114509087919609763_">				<path d="M231.48,191.79c3.41,5.77,5.12,12.38,4.9,18.99c0,9.39-2.13,16.64-6.61,21.98c-4.69,5.33-10.67,9.38-17.49,11.3      c-7.9,2.56-16.22,3.84-24.54,3.84h-11.31c-2.56,0-5.33-0.21-8.32-0.42v-71.69c1.5-0.21,4.48-0.42,8.75-0.21      c4.05-0.21,8.96-0.21,14.51-0.21c8.75-0.22,17.28,1.06,25.17,4.26C222.73,181.98,227.85,186.25,231.48,191.79z"/>				<path d="M421.35,6.4H90.67C40.54,6.4,0,46.94,0,97.07v317.88c0,50.13,40.54,90.67,90.67,90.67h330.68      c50.13,0,90.67-40.54,90.67-90.67V97.07C512.02,46.94,471.48,6.4,421.35,6.4z M270.09,254.94      c-18.97,26.56-51.55,33.28-82.35,33.28c-5.12,0-8.53,0-10.67-0.21c-2.13-0.21-5.12-0.21-9.17-0.21v68.48      c0.21,1.49-0.85,2.77-2.35,2.99h-41.38c-1.71,0-2.56-0.86-2.56-2.78V136.97c0-1.5,0.64-2.35,2.13-2.35c3.63,0,7.04,0,11.95-0.21      l54.19-1.07c17.49,0,32,2.13,43.94,6.61c19.96,7.49,36.61,21.52,44.16,41.82C286.56,204.81,284.59,234.65,270.09,254.94z       M415.59,229.34c0,1.71-1.07,2.35-3.42,2.35c-7.68-0.21-15.57,0.43-23.04,2.13c-6.18,1.28-12.16,3.2-17.92,5.76      c-4.05,1.92-7.89,4.48-10.88,7.9v108.8c0,2.13-0.85,2.99-2.77,2.99h-42.03c-1.71,0.21-3.2-0.86-3.41-2.56V237.66      c0-5.12,0-10.45-0.22-16c-0.21-5.54-0.21-11.09-0.42-16.64c0-4.9-0.43-9.6-0.86-14.5c-0.21-1.07,0.43-2.14,1.5-2.35      c0-0.22,0.42-0.22,0.64,0h37.33c2.14,0,3.84,1.49,4.48,3.41c0.64,1.71,1.07,3.42,1.28,5.34c0.43,2.13,0.86,4.48,1.07,6.61      c0.21,2.35,0.43,4.91,0.43,7.68c6.4-7.47,14.08-13.65,22.82-18.35c9.82-5.55,21.12-8.32,32.43-8.32      c1.49-0.21,2.77,0.85,2.99,2.35V229.34z"/>			</g>		</g>	</g></g></svg></span>
+						</div>
+						<div class="skill-card">
+							<span><?xml version="1.0" encoding="UTF-8"?><!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512.12 512.12" style="enable-background:new 0 0 512.12 512.12;" xml:space="preserve" width="512" height="512"><g>	<polygon points="165.53,173.79 193.02,262.77 138.74,262.77  "/>	<path d="M421.43,6.4H90.68C40.6,6.4,0,47,0,97.09v317.94c0,50.09,40.6,90.69,90.68,90.69h330.75c50.09,0,90.69-40.6,90.69-90.69   V97.09C512.12,47,471.52,6.4,421.43,6.4z M271.35,358.49h-44.66c-1.59,0.17-3.06-0.86-3.44-2.41l-17.52-50.94h-79.36l-16.15,50.25   c-0.45,1.89-2.18,3.19-4.12,3.1H65.91c-2.3,0-3.1-1.26-2.41-3.78l68.71-197.07c0.69-2.06,1.38-4.07,2.06-6.71   c0.9-4.58,1.36-9.24,1.38-13.91c-0.17-1.17,0.64-2.24,1.8-2.41c0.2-0.03,0.4-0.03,0.6,0h54.63c1.59,0,2.51,0.57,2.74,1.72   l77.99,218.72C274.1,357.34,273.41,358.49,271.35,358.49z M438.83,273.42c-0.34,4.12-0.63,7.1-0.86,8.93   c-0.18,1.57-1.51,2.75-3.09,2.75c-1.37,0-3.72,0.17-7.04,0.51c-3.33,0.35-7.45,0.58-12.37,0.69c-4.93,0.12-10.14-0.72-15.63-0.72   h-67.68c0.83,6.7,3.05,13.14,6.53,18.93c3.84,5.73,9.27,10.2,15.63,12.88c8.61,3.73,17.93,5.55,27.31,5.35   c7.44-0.14,14.86-0.95,22.16-2.43c6.53-0.88,12.92-2.55,19.05-4.96c1.14-0.92,1.72-0.35,1.72,1.71v32.64   c0.06,0.89-0.12,1.78-0.52,2.58c-0.39,0.62-0.92,1.15-1.54,1.54c-6.8,3.01-13.95,5.14-21.29,6.34c-9.96,1.88-20.09,2.74-30.23,2.58   c-25.67,0-50.83-7.44-67.68-27.83c-13.27-16.06-19.24-38.26-19.24-59.09c0.01-22.6,6.8-45.47,21.3-63.04   c15.7-19.021,37.32-26.96,61.5-26.96c20.76,0,42.27,6.98,55.65,23.53c11.24,13.89,16.84,32.61,16.84,50.33   C439.35,264.72,439.17,269.3,438.83,273.42z M365.14,222.92c-11.81-0.72-22.93,5.62-28.34,16.14c-2.36,4.79-3.92,9.93-4.64,15.22   h45c5.5,0,9.57-0.05,12.2-0.17c1.76-0.17,3.46-0.74,4.98-1.65v-2.06c-0.07-2.69-0.53-5.35-1.37-7.9   C389.16,230.45,377.77,222.43,365.14,222.92z"/></g></svg></span>
+						</div>
+						<div class="skill-card">
+							<span><?xml version="1.0" encoding="UTF-8"?><!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="512" height="512"><g id="Layer_2_00000139992070164898275570000017758719175361977789_">	<g id="Surfaces_00000005262748026417272620000000272620920402432403_">		<g id="Drawing_Surface_1_">			<g id="Outline_no_shadow_00000031186969925551911540000009553510160061498536_">				<path d="M208,173.65h-0.43l-26.45,88.96h54.19L208,173.65z M208,173.65h-0.43l-26.45,88.96h54.19L208,173.65z M421.33,6.4H90.67      C40.53,6.4,0,46.93,0,97.07v317.86c0,50.14,40.53,90.67,90.67,90.67h330.66c50.14,0,90.67-40.53,90.67-90.67V97.07      C512,46.93,471.47,6.4,421.33,6.4z M313.6,359.04h-44.59c-1.49,0.21-2.98-0.85-3.41-2.35l-17.49-50.77h-79.36l-16.22,50.13      c-0.42,1.92-2.13,3.2-4.05,2.99h-40.11c-2.34,0-2.98-1.28-2.34-3.84l68.69-197.76c0.64-2.13,1.28-4.48,2.13-7.04      c0.86-4.48,1.28-9.17,1.28-13.87c-0.21-1.06,0.64-2.13,1.71-2.34h55.25c1.71,0,2.56,0.64,2.78,1.7l77.86,219.74      C316.37,357.97,315.73,359.04,313.6,359.04z M386.13,355.84c0,2.35-0.85,3.41-2.77,3.41h-41.81c-2.14,0-3.2-1.28-3.2-3.41      V191.57c0-2.13,0.85-2.98,2.77-2.98h42.24c1.92,0,2.77,1.06,2.77,2.98V355.84z M381.65,163.2c-4.9,5.12-12.16,7.89-19.41,7.47      c-7.04,0.21-13.87-2.56-18.99-7.47c-4.9-5.33-7.46-12.37-7.25-19.63c-0.21-7.25,2.56-14.08,7.68-18.98      c5.12-4.91,11.95-7.47,18.99-7.47c8.32,0,14.72,2.56,19.41,7.47c4.69,5.12,7.25,11.94,7.04,18.98      C389.33,150.83,386.77,157.87,381.65,163.2z M207.57,173.65l-26.45,88.96h54.19L208,173.65H207.57z"/>			</g>		</g>	</g></g></svg></span>
+						</div>
+						<div class="skill-card">
+							<span><?xml version="1.0" encoding="UTF-8"?><!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="512" height="512"><g>	<g id="Surfaces_00000015316392273480997780000005079958696681645222_">		<g id="Publishing_Surface_00000044139518724678442640000017891423955416242099_">			<g id="Outline_no_shadow_00000162349061969249967620000014322161070957795209_">				<path d="M421.33,6.4H90.67C40.53,6.4,0,46.93,0,97.07v317.86c0,50.14,40.53,90.67,90.67,90.67h330.66      c50.14,0,90.67-40.53,90.67-90.67V97.07C512,46.93,471.47,6.4,421.33,6.4z M186.03,355.84c0,2.35-1.07,3.41-2.99,3.41h-41.81      c-1.92,0-2.78-1.06-2.78-3.41V136.96c0-1.92,1.07-2.77,2.99-2.77h41.6c1.28-0.22,2.56,0.64,2.77,2.13      c0.22,0.21,0.22,0.43,0.22,0.64V355.84z M376.53,349.44c-11.09,4.69-22.82,8.11-34.77,10.24c-10.67,1.92-21.76,2.99-32.85,2.99      c-15.79,0.21-31.58-2.99-45.87-9.6c-13.44-6.19-24.53-16.43-32.21-29.02c-7.9-13.01-11.74-29.22-11.74-48.64      c-0.21-15.78,3.84-31.36,11.74-45.01c8.1-13.87,19.84-25.39,33.92-33.07c14.93-8.32,32.85-12.37,53.97-12.37      c1.07,0,2.56,0,4.48,0.21c1.92,0.22,4.05,0.22,6.61,0.43v-67.41c0-1.5,0.64-2.35,2.14-2.35h43.3c1.07-0.21,1.92,0.64,2.14,1.49      c0,0.22,0,0.43,0,0.43v203.09c0,3.84,0.21,8.11,0.42,12.8c0.43,4.48,0.64,8.75,0.86,12.38      C378.67,347.52,378.03,348.8,376.53,349.44z M317.01,224.64c-8.32,0-16.64,1.71-24.1,5.55c-7.26,3.62-13.44,8.96-18.14,15.78      c-4.69,6.83-7.04,16-7.04,27.1c-0.21,7.46,1.07,14.93,3.63,21.97c2.13,5.76,5.33,10.88,9.6,15.15      c4.05,3.84,8.96,6.82,14.51,8.53c5.76,1.92,11.73,2.771,17.7,2.771c3.2,0,6.19-0.21,8.96-0.42c2.78,0.21,5.34-0.22,7.68-1.07      v-93.87c-1.92-0.42-3.84-0.85-5.76-1.06C321.71,224.85,319.36,224.64,317.01,224.64z"/>			</g>		</g>	</g></g></svg></span>
+						</div>
+						<div class="skill-card">
+							<span>
+								<svg id="katman_1" data-name="katman 1" xmlns="http://www.w3.org/2000/svg" width="54" height="54" version="1.1" viewBox="0 0 841.9 595.3">
+									<polygon class="cls-1" points="398.7 273.2 498.6 220.8 297.6 220.8 398.7 273.2"/>
+									<polygon class="cls-1" points="297.6 374.6 499.4 374.6 398.7 321.9 297.6 374.6"/>
+									<path class="cls-1" d="M586.3,48.1H255.6c-50.1,0-90.7,40.5-90.7,90.7v317.9c0,50.1,40.5,90.7,90.7,90.7h330.7c50.1,0,90.7-40.5,90.7-90.7V138.7c0-50.1-40.5-90.7-90.7-90.7ZM582.1,225.9h0s-136.2,71.8-136.2,71.8l136.2,71v49.4l-58.6-31.1v2.6c0,19-13.9,30.7-34,30.7h-185.6c-21.1,0-34-11.7-34-30.7v-49l82-42.9-82-42.4v-49.2c0-19.4,12.8-31.1,34-31.1h185.7c20.2,0,34.1,11.8,34.1,31.1v1.8l58.5-30.7v48.7Z"/>
+								</svg>
+							</span>
+						</div>
+						<div class="skill-card">
+							<span><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="Subtitleedit--Streamline-Simple-Icons" height="32" width="32">
+  <desc>
+    Subtitleedit Streamline Icon: https://streamlinehq.com
+  </desc>
+  <title>Subtitle Edit</title>
+  <path d="M3.858 0.02C1.744 0.23 0.16 1.91 0.02 4.09c-0.038 0.598 -0.02 15.896 0.02 16.156 0.3 1.996 1.752 3.455 3.7 3.719 0.418 0.057 16.38 0.04 16.674 -0.018 1.433 -0.28 2.614 -1.164 3.156 -2.363 0.2 -0.443 0.304 -0.776 0.377 -1.208 0.047 -0.282 0.075 -16.036 0.029 -16.509A4.266 4.266 0 0 0 20.348 0.048C20.065 0.008 4.261 -0.02 3.858 0.02m7.237 6.15c0.707 0.707 1.285 1.299 1.285 1.315 0 0.024 -0.57 0.03 -2.79 0.03 -3.106 0 -2.95 -0.008 -3.286 0.16 -1.145 0.58 -1.175 2.2 -0.052 2.8 0.34 0.18 0.265 0.174 1.725 0.192 1.404 0.018 1.475 0.023 1.976 0.153 1.495 0.388 2.688 1.64 3.015 3.164a4.2 4.2 0 0 1 -3.547 5.057c-0.347 0.046 -6.605 0.05 -6.605 0.004 0 -0.016 0.573 -0.602 1.273 -1.302L5.36 16.47l1.87 -0.01c2.07 -0.009 1.97 -0.002 2.326 -0.172a1.566 1.566 0 0 0 0.421 -2.532c-0.431 -0.43 -0.571 -0.461 -2.05 -0.462 -1.802 0 -2.364 -0.125 -3.253 -0.721 -3.078 -2.066 -2.152 -6.837 1.475 -7.597 0.38 -0.08 0.522 -0.086 2.11 -0.089l1.551 -0.003 1.284 1.285m10.067 -1.256c0 0.017 -0.578 0.608 -1.284 1.315l-1.284 1.286h-4.427L12.87 6.216a68.614 68.608 0 0 1 -1.296 -1.315c0 -0.01 2.157 -0.018 4.793 -0.018 3.813 0 4.794 0.006 4.794 0.03m-2.562 7.06 -0.006 1.308h-4.449l-0.033 -0.094c-0.336 -0.942 -0.695 -1.527 -1.346 -2.194a4.325 4.325 0 0 1 -0.292 -0.313c0 -0.01 1.38 -0.016 3.066 -0.016h3.066l-0.006 1.309m1.278 5.78a67.498 67.492 0 0 1 1.284 1.302c0 0.01 -1.955 0.018 -4.344 0.018 -2.389 0 -4.344 -0.008 -4.344 -0.018 0 -0.01 0.103 -0.12 0.228 -0.243a5.453 5.453 0 0 0 1.38 -2.185l0.053 -0.16h4.458l1.285 1.285" fill="#ffffff" stroke-width="1"></path>
+</svg></span>
+						</div>
+						<div class="skill-card">
+							<span></span>
+						</div>
+						<div class="skill-card">
+							<span></span>
+						</div>
+						<div class="skill-card">
+							<span></span>
+						</div>
+						
+						<!-- thêm skill card tuỳ ý -->
+					</div>
+				</section>
+
+	</p></section>
+  <section id="showcase">
+		<div class="wrap">
+			<header>
+				<div>
+					<h1>Portfolio — Graphics Showcase</h1>
+					<p class="lead">Click để xem Before / After</p>
+				</div>
+				<div class="kbd">Tip: ← → Để chuyển đổi các ảnh · Esc đóng · +/- hoặc lăn chuột để Zoom</div>
+			</header>
+
+			<section class="grid" id="grid"></section>
+		</div>
+
+		<!-- Modal viewer -->
+		<div class="modal" id="modal" aria-hidden="true">
+			<div class="viewer fade-in" role="dialog" aria-modal="true">
+				<div class="topbar">
+					<div class="left">
+						<button id="prevBtn" title="Prev">Ảnh trước đó</button>
+						<button id="nextBtn" title="Next">Ảnh tiếp theo</button>
+						<div style="color:var(--muted);margin-left:10px" id="projTitle">Title</div>
+					</div>
+					<div class="right">
+						<button id="zoomOut">-</button>
+						<span id="zoomPct">100%</span>
+						<button id="zoomIn">+</button>
+						<button id="resetZoom">Reset</button>
+						<button id="closeBtn" style="margin-left:8px;background:linear-gradient(180deg,#ffefef,#ffdede);color:#921818;border-radius:8px;">Close</button>
+					</div>
+				</div>
+
+				<div class="content">
+					<div class="stage" id="stage">
+						<div class="after"><img id="imgAfter" alt="after image" loading="lazy"/></div>
+						<div class="before" id="beforeWrap"><img id="imgBefore" alt="before image" loading="lazy"/></div>
+						<div class="handle" id="handle" aria-hidden="true"><div class="knob"></div></div>
+
+						<div class="rangewrap">
+							<input type="range" id="range" min="0" max="100" value="50" aria-label="before-after slider">
+						</div>
+					</div>
+
+					<aside class="side">
+						<div>
+							<h3 id="sideTitle">Project</h3>
+							<div style="color:var(--muted)" id="sideTags">tags</div>
+						</div>
+
+						<div class="controls">
+							<button id="showBefore">Show Before</button>
+							<button id="showAfter">Show After</button>
+							<button id="center">Center</button>
+							<button id="download">Download</button>
+						</div>
+
+						<div style="margin-top:6px;color:var(--muted);font-size:13px">Kéo thanh để so sánh</div>
+						<div style="margin-top:auto;color:var(--muted);font-size:12px">Tip: Khi zoom >100% có thể giữ và kéo để pan</div>
+					</aside>
+				</div>
+			</div>
+		</div>
+	</section>
+  <script>
+    // Example project list — thay bằng ảnh của bạn (before/after URLs)
+// Example project list — thay bằng ảnh của bạn (before/after URLs)
+		const projects = [
+			{id:1, title:'Real estate Projects', tags:['Retouching','Enhancement'], before:'./images/PhotoEditing/Demo1.jpg', after:'./images/PhotoEditing/Demo.jpg'},
+			{id:2, title:'Real estate Projects', tags:['Retouching','Enhancement'], before:'./images/PhotoEditing/Demo2.jpg', after:'./images/PhotoEditing/Demo3.jpg'},
+			{id:3, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo5.jpg', after:'./images/PhotoEditing/Demo4.png'},
+			{id:4, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo7.jpg', after:'./images/PhotoEditing/Demo6.png'},
+			{id:5, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo9.jpg', after:'./images/PhotoEditing/Demo8.png'},
+			{id:6, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo11.jpg', after:'./images/PhotoEditing/Demo10.png'},
+			{id:7, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo13.jpg', after:'./images/PhotoEditing/Demo12.png'},
+			{id:8, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo15.jpg', after:'./images/PhotoEditing/Demo14.png'},
+			{id:9, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo17.jpg', after:'./images/PhotoEditing/Demo16.png'},
+			{id:10, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo19.jpg', after:'./images/PhotoEditing/Demo18.png'},
+			{id:11, title:'Real estate Projects', tags:['Enhancement'], before:'./images/PhotoEditing/Demo21.jpg', after:'./images/PhotoEditing/Demo20.png'},
+			{id:12, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo.jpg', after:'./images/kdp/Demo1.jpg'},
+			{id:13, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo2.jpg', after:'./images/kdp/Demo3.jpg'},
+			{id:14, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo4.jpg', after:'./images/kdp/Demo5.jpg'},
+			{id:15, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo6.jpg', after:'./images/kdp/Demo7.jpg'},
+			{id:16, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo8.jpg', after:'./images/kdp/Demo9.jpg'},
+			{id:17, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo10.jpg', after:'./images/kdp/Demo11.jpg'},
+			{id:18, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo12.jpg', after:'./images/kdp/Demo13.jpg'},
+			{id:19, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo14.jpg', after:'./images/kdp/Demo15.png'},
+			{id:20, title:'Design Coloring Book Projects', tags:['Text Decoration','Draw Art'], before:'./images/kdp/Demo16.png', after:'./images/kdp/Demo17.png'},
+			{id:21, title:'Blending and Retouching Projects', tags:['Blending','Retouching'], before:'./images/BlendandRetouch/Demo1.jpg', after:'./images/BlendandRetouch/Demo.jpg'},
+			{id:22, title:'Blending and Retouching Projects', tags:['Blending','Retouching'], before:'./images/BlendandRetouch/Demo3.png', after:'./images/BlendandRetouch/Demo2.jpg'},
+			{id:23, title:'Blending and Retouching Projects', tags:['Blending','Retouching'], before:'./images/BlendandRetouch/Demo4.jpg', after:'./images/BlendandRetouch/Demo5.jpg'},
+			{id:24, title:'POD Project', tags:['Text Decoration','Draw Art'], before:'./images/pod/Demo.png', after:'./images/pod/Demo1.png'},
+		];
+
+		const grid = document.getElementById('grid');
+		const modal = document.getElementById('modal');
+		const projTitle = document.getElementById('projTitle');
+		const sideTitle = document.getElementById('sideTitle');
+		const sideTags = document.getElementById('sideTags');
+		const imgAfter = document.getElementById('imgAfter');
+		const imgBefore = document.getElementById('imgBefore');
+		const beforeWrap = document.getElementById('beforeWrap');
+		const handle = document.getElementById('handle');
+		const range = document.getElementById('range');
+		const zoomInBtn = document.getElementById('zoomIn');
+		const zoomOutBtn = document.getElementById('zoomOut');
+		const zoomPct = document.getElementById('zoomPct');
+		const resetZoomBtn = document.getElementById('resetZoom');
+		const nextBtn = document.getElementById('nextBtn');
+		const prevBtn = document.getElementById('prevBtn');
+		const closeBtn = document.getElementById('closeBtn');
+		const showBeforeBtn = document.getElementById('showBefore');
+		const showAfterBtn = document.getElementById('showAfter');
+		const centerBtn = document.getElementById('center');
+		const downloadBtn = document.getElementById('download');
+		const stage = document.getElementById("stage");
+
+		let current = 0;
+		let sliderPos = 50;
+
+		// ⚡ STATE CHUẨN CHO PAN/ZOOM
+		const state = {
+			scale: 1,
+			minScale: 1,
+			maxScale: 10,
+			tx: 0,
+			ty: 0,
+			isPanning: false,
+			draggingSlider: false,
+			last: null
+		};
+
+		// Build grid
+		projects.forEach((p, i)=>{
+			const card = document.createElement('button');
+			card.className='card';
+			card.innerHTML = `
+				<div class="thumb"><img data-src="${p.after}" alt="${escapeHtml(p.title)}" loading="lazy"></div>
+				<div class="meta"><div class="title">${escapeHtml(p.title)}</div><div class="tags">${p.tags.join(' • ')}</div></div>
+			`;
+			card.addEventListener('click', ()=> openViewer(i));
+			grid.appendChild(card);
+		});
+
+		const io = new IntersectionObserver((entries)=>{
+			entries.forEach(e=>{
+				if(e.isIntersecting){
+					const img = e.target.querySelector('img[data-src]');
+					if(img){ img.src = img.dataset.src; img.removeAttribute('data-src'); }
+					io.unobserve(e.target);
+				}
+			})
+		},{rootMargin:'200px'});
+		document.querySelectorAll('.card').forEach(c=>io.observe(c));
+
+		// =========================
+		// OPEN VIEWER
+		// =========================
+		function openViewer(i){
+			current = i;
+
+			sliderPos = 50;
+			state.scale = 1;
+			state.tx = 0;
+			state.ty = 0;
+
+			const p = projects[current];
+			projTitle.textContent = p.title;
+			sideTitle.textContent = p.title;
+			sideTags.textContent = p.tags.join(', ');
+
+			imgAfter.src = "";
+			imgBefore.src = "";
+
+			setTimeout(()=>{
+				loadImg(imgAfter, p.after);
+				loadImg(imgBefore, p.before);
+			},80);
+
+			modal.classList.add('open');
+		}
+
+		function loadImg(dom, url){
+			dom.src = url;
+			dom.onload = applyTransform;
+		}
+
+		function close(){
+			modal.classList.remove('open');
+		}
+
+		// =========================
+		// BEFORE/AFTER SLIDER
+		// =========================
+		function setSlider(v){
+			v = Math.max(0,Math.min(100,v));
+			sliderPos = v;
+			range.value = v;
+			beforeWrap.style.clipPath = `inset(0 ${100-v}% 0 0)`;
+			handle.style.left = v + "%";
+		}
+
+		range.addEventListener('input', e=>{
+			state.draggingSlider = true;
+			setSlider(e.target.value);
+		});
+		// ----- Kéo trực tiếp bằng handle -----
+		handle.addEventListener("pointerdown", e => {
+			e.preventDefault();
+			state.draggingSlider = true;
+			const rect = stage.getBoundingClientRect();
+
+			function move(ev){
+				let percent = ((ev.clientX - rect.left) / rect.width) * 100;
+				setSlider(percent);
+			}
+
+			function up(){
+				state.draggingSlider = false;
+				window.removeEventListener("pointermove", move);
+				window.removeEventListener("pointerup", up);
+			}
+
+			window.addEventListener("pointermove", move);
+			window.addEventListener("pointerup", up);
+		});
+		// =====================
+		// PAN & ZOOM CORE
+		// =====================
+		function clamp(){
+			const rect = stage.getBoundingClientRect();
+			const max = (state.scale - 1) * rect.width / 2;
+			state.tx = Math.max(-max, Math.min(max, state.tx));
+			state.ty = Math.max(-max, Math.min(max, state.ty));
+		}
+
+		function applyTransform(){
+			imgAfter.style.transform =
+			imgBefore.style.transform =
+				`translate(${state.tx}px, ${state.ty}px) scale(${state.scale})`;
+
+			zoomPct.textContent = Math.round(state.scale * 100) + "%";
+		}
+
+		// pointer pan
+		function panStart(e){
+			if(state.scale <= 1 || state.draggingSlider) return;
+			state.isPanning = true;
+			e.target.setPointerCapture(e.pointerId);
+			state.last = {x:e.clientX, y:e.clientY, id:e.pointerId};
+		}
+
+		function panMove(e){
+			if(!state.isPanning || e.pointerId !== state.last.id) return;
+			state.tx += e.clientX - state.last.x;
+			state.ty += e.clientY - state.last.y;
+			state.last.x = e.clientX;
+			state.last.y = e.clientY;
+			clamp();
+			applyTransform();
+		}
+
+		function panEnd(e){
+			if(e.pointerId === state.last?.id){
+				state.isPanning = false;
+				state.last = null;
+				state.draggingSlider = false;
+				try{ e.target.releasePointerCapture(e.pointerId); }catch(_){}
+			}
+		}
+
+		stage.addEventListener("pointerdown",(e)=>{
+			if (
+				e.target.closest("#handle") ||   // thanh kéo before/after
+				e.target.closest("#range")       // input range
+			) return;
+
+			panStart(e);
+		});
+
+		stage.addEventListener("pointermove", panMove);
+		stage.addEventListener("pointerup", panEnd);
+
+		// Wheel zoom
+		stage.addEventListener("wheel", e=>{
+			e.preventDefault();
+			const rect = stage.getBoundingClientRect();
+			const cx = e.clientX - rect.left - rect.width/2;
+			const cy = e.clientY - rect.top  - rect.height/2;
+
+			let f = e.deltaY < 0 ? 1.1 : 1/1.1;
+			let next = state.scale * f;
+
+			next = Math.max(state.minScale, Math.min(state.maxScale, next));
+			f = next / state.scale;
+
+			state.tx = (state.tx - cx)*f + cx;
+			state.ty = (state.ty - cy)*f + cy;
+			state.scale = next;
+
+			clamp();
+			applyTransform();
+		},{passive:false});
+
+		// Zoom buttons
+		zoomInBtn.addEventListener("click", ()=>{
+			state.scale = Math.min(state.maxScale, state.scale * 1.2);
+			applyTransform();
+		});
+		zoomOutBtn.addEventListener("click", ()=>{
+			state.scale = Math.max(1, state.scale / 1.2);
+			applyTransform();
+		});
+		resetZoomBtn.addEventListener("click", ()=>{
+			state.scale = 1; state.tx = 0; state.ty = 0;
+			applyTransform();
+		});
+
+		// =========================
+		// NAVIGATION
+		// =========================
+		nextBtn.addEventListener('click', ()=>{ current=(current+1)%projects.length; openViewer(current); });
+		prevBtn.addEventListener('click', ()=>{ current=(current-1+projects.length)%projects.length; openViewer(current); });
+		closeBtn.addEventListener('click', close);
+
+		showBeforeBtn.addEventListener('click', ()=> setSlider(0));
+		showAfterBtn.addEventListener('click', ()=> setSlider(100));
+		centerBtn.addEventListener('click', ()=> setSlider(50));
+		downloadBtn.addEventListener('click', ()=> window.open(projects[current].after,'_blank'));
+
+		window.addEventListener('keydown',(e)=>{
+			if(!modal.classList.contains('open')) return;
+			if(e.key==='Escape') close();
+			if(e.key==='ArrowRight') nextBtn.click();
+			if(e.key==='ArrowLeft') prevBtn.click();
+			if(e.key==='+'||e.key==='='){ state.scale=Math.min(state.maxScale,state.scale*1.2); applyTransform(); }
+			if(e.key==='-'){ state.scale=Math.max(1,state.scale/1.2); applyTransform(); }
+		});
+
+		// Helper
+		function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+		modal.addEventListener('click',(e)=>{ if(e.target===modal) close(); });
+		document.addEventListener('dragstart', e=>{ if(e.target.tagName==='IMG') e.preventDefault(); });
+
+		let sections = document.querySelectorAll('section');
+		let ulliLink = document.querySelectorAll('header ul li a');
+		window.onscroll = () => {
+				sections.forEach(sec => {
+						let top = window.scrollY;
+						let offset = sec.offsetTop;
+						let height = sec.offsetHeight;
+						let id = sec.getAttribute('id');
+						if (top >= offset && top < offset + height) {
+								ulliLink.forEach(links => {
+										links.classList.remove('active');
+										document.querySelector('header ul li a[href*=' + id + ']').classList.add('active');
+								});
+						};
+				});
+		};
+
+  </script>
+</body>
+</html>
